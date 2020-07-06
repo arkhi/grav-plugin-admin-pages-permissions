@@ -1,0 +1,10 @@
+enabled: true
+active: false
+permissions:
+  groups:
+    supervisors:
+      create: true
+      read: true
+      update: true
+      delete: true
+      move: true

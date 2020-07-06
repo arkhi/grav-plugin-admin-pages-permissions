@@ -1,0 +1,32 @@
+name: Admin Pages Permissions
+slug: admin-pages-permissions
+type: plugin
+version: 0.1.0
+description: Manage interaction permissions for users with access rights to Pages in the Admin.
+icon: plug
+author:
+  name: Fabien Basmaison
+  email: contact@arkhi.org
+homepage: https://github.com/arkhi/grav-plugin-admin-pages-permissions
+keywords: grav, plugin, admin, pages, crud, permissions
+bugs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/issues
+docs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/blob/develop/README.md
+license: MIT
+
+dependencies:
+  - {name: grav, version: '>=1.6.0'}
+  - {name: admin, version: '>=1.9.15'}
+
+form:
+  validation: loose
+  fields:
+    enabled:
+      type: toggle
+      label: PLUGIN_ADMIN.PLUGIN_STATUS
+      highlight: 1
+      default: 0
+      options:
+        1: PLUGIN_ADMIN.ENABLED
+        0: PLUGIN_ADMIN.DISABLED
+      validate:
+        type: bool

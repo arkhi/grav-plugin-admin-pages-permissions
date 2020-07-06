@@ -1,0 +1,25 @@
+{% if authorize(['admin.pages', 'admin.super']) %}
+    <div id="latest">
+        <div class="button-bar">
+            <a class="button" href="{{ base_url_relative }}/pages"><i class="fa fa-fw fa-file-text-o"></i>{{ "PLUGIN_ADMIN.MANAGE_PAGES"|tu }}</a>
+        </div>
+        <h1>{{ "PLUGIN_ADMIN.LATEST_PAGE_UPDATES"|tu }}</h1>
+        <table>
+        {# @todo List latest N posts for the logged in user, not only the
+            filtered latest N posts from all users. #}
+        {% for latest in admin.latestPages
+            if
+                admin.latestPages
+                and perms[latest.path]['update']
+        %}
+            <tr>
+                <td class="triple page-title">
+                    <a href="{{ base_url }}/pages/{{ latest.route|trim('/') }}"><i class="fa fa-fw fa-file-text-o"></i> {{ latest.title|e }}</a></td>
+                <td class="triple page-route">{{ latest.route }}</td><td>{{ latest.modified|adminNicetime }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+    </div>
+{% else %}
+    <div class="padding">You don't have sufficient access to view the dashboard...</div>
+{% endif %}
