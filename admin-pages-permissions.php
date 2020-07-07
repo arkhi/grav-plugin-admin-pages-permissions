@@ -33,7 +33,42 @@ class AdminPagesPermissionsPlugin extends Plugin
         return [
             'onPluginsInitialized' => [
                 ['autoload', 100000], // @todo Remove when plugin requires Grav >=1.7
+                ['onPluginsInitialized', 0],
             ],
+        ];
+    }
+
+    /**
+    * Composer autoload.
+    *
+    * @return ClassLoader
+    */
+    public function autoload(): ClassLoader
+    {
+        return require __DIR__ . '/vendor/autoload.php';
+    }
+
+    /**
+     * Handle restrictions and initialization of the plugin as early as possible.
+     *
+     * @param  Event  $event
+     *
+     * @return null
+     */
+    public function onPluginsInitialized(Event $event)
+    {
+        // Stop if:
+        // * We are not in the Admin plugin;
+        // * User is not logged in.
+        // =====================================================================
+        if (
+            !$this->isAdmin()
+            || !$this->grav['user']->authenticated
+        ) {
+            return;
+        }
+
+        $this->enable([
             'onAdminTwigTemplatePaths' => [
                 [ 'onAdminTwigTemplatePaths', 0 ],
             ],
@@ -47,17 +82,7 @@ class AdminPagesPermissionsPlugin extends Plugin
             'onAdminSave' => [
                 [ 'canUpdate', 0 ],
             ],
-        ];
-    }
-
-    /**
-    * Composer autoload.
-    *is
-    * @return ClassLoader
-    */
-    public function autoload(): ClassLoader
-    {
-        return require __DIR__ . '/vendor/autoload.php';
+        ]);
     }
 
     /**
@@ -98,17 +123,6 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function onAdminPageInitialized( Event $event )
     {
-        // Stop if either:
-        // * We are not in the Admin plugin.
-        // * User is not logged in;
-        // =====================================================================
-        if (
-            !$this->isAdmin()
-            || !$this->grav['user']->authenticated
-        ) {
-            return;
-        }
-
         $user      = $this->grav['user'];
         $pathsPerms = null;
 
@@ -400,11 +414,6 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function getPermsForUser(Page $page, User $user): ?array
     {
-        // Don't proceed if we are not in the Admin plugin.
-        if (!$this->isAdmin()) {
-            return null;
-        }
-
         $perms     = $this->getPerms($page);
         $permsUser = [];
 
@@ -449,11 +458,6 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function canCreate( Event $event )
     {
-        // Don't proceed if we are not in the Admin plugin.
-        if (!$this->isAdmin()) {
-            return;
-        }
-
         $page   = $event;
         $parent = $this->grav['page']->find($page['data']['route']);
 
