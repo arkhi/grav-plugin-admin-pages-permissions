@@ -86,9 +86,13 @@ Note that if you use the Admin Plugin, a file with your configuration named admi
 
 ## Usage
 
-You can add any or all of the permissions for specific groups or users.
+This plugin allows to limit what a user can see or do when accessing pages, including:
 
-The pages will be displayed based on the rights the user has for each node of the pages’s tree.
+- Adding specific permissions to groups or users.
+- Filter the list of pages shown to the logged in user based on those permissions.
+- Lock a custom list of page’s properties.
+
+Permissions can be assigned for specific groups or users, globally or per page.
 
 ## Credits
 
