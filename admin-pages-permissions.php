@@ -103,86 +103,164 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
-     * When Twig Templates Path for the Admin are processed…
+     * Determine if the user belongs to a group that can manage all pages.
      *
-     * @param  Event $event
+     * @return bool
      */
-    public function onAdminTwigTemplatePaths( Event $event )
+    public function getAdminStatus(User $user): bool
     {
-        // Load admin templates from the theme.
-        $paths   = $event['paths'];
-        $paths[] = __DIR__ . '/admin/themes/grav/templates';
+        if ($user['groups']) {
+            foreach ($user['groups'] as $group)  {
+                // @todo Find groups which have all permissions for all pages,
+                // based on permissions instead of hardcoded.
+                $isAdmin = in_array($group, ['editors', 'supervisors']);
 
-        $event['paths'] = $paths;
-    }
-
-    /**
-     * When a Page is initialized in the Admin…
-     *
-     * @param  Event $event
-     */
-    public function onAdminPageInitialized( Event $event )
-    {
-        $user       = $this->grav['user'];
-        $pathsPerms = null;
-
-        $this->grav['twig']->twig_vars['is_admin'] = $this->getAdminStatus($user);
-
-        // Stop if we’re not dealing with specific Admin locations.
-        // “Dashboard” and “pages” locations let user interact with pages.
-        // =====================================================================
-        if (!in_array(
-            $this->grav['admin']->location,
-            ['dashboard', 'pages']
-        )) {
-            return;
-        }
-
-        // A route will not have a page when creating a new page; get the
-        // closest existing page to the current route.
-        $route = '/' . $this->grav['admin']->route;
-
-        while (true) {
-            $page  = $this->grav['page']->find($route);
-            $route = substr($route, 0, strripos($route, '/') + 1);
-
-            if ($page !== null || $route === '') {
-                break;
+                if ($isAdmin) {
+                    return true;
+                }
             }
         }
 
-        // Stop if we’re not dealing with a page.
-        // =====================================================================
-        if (!$page instanceof Page) {
-            return;
+        return false;
+    }
+
+    /**
+     * Sort two paths from the deepest descendants to the oldest ancestors.
+     * This function is used in to sort an array of paths in a sorting function.
+     *
+     * @param  string $path1 First path to compare
+     * @param  string $path2 Second path to compare
+     *
+     * @return integer
+     */
+    private function deepToRoot($path1, $path2): int
+    {
+        $depth1 = count(explode('/', $path1));
+        $depth2 = count(explode('/', $path2));
+
+        return ($depth1 > $depth2) ? -1 : 1;
+    }
+
+    /**
+     * Check that no locked property has been changed.
+     * The locked properties will be reverted if necessary.
+     *
+     * @param  Page $original Original Page
+     * @param  Page $new      Updated Page
+     *
+     * @return Page           Filtered Page
+     */
+    public function checkLockedProps(Page $original, Page $new): Page
+    {
+        $filtered    = $new;
+        $lockedProps = [
+            'parent'   => [
+                'message'      => 'the parent',
+                'dependencies' => [
+                    'path',
+                    'route',
+                ],
+            ],
+            'template' => [
+                'message'      => 'the template',
+                'dependencies' => [
+                    'name',
+                ],
+            ],
+        ];
+
+        foreach ($lockedProps as $property => $value) {
+            // If the property has been added, removed or changed…
+            $isAdded =
+                !method_exists($original, $property)
+                && method_exists($filtered, $property);
+
+            $isRemoved =
+                method_exists($original, $property)
+                && !method_exists($filtered, $property);
+
+            $isUpdated =
+                method_exists($original, $property)
+                && method_exists($filtered, $property)
+                && $original->$property() !== $filtered->$property();
+
+            if ($isAdded) {
+                unset($filtered->$property);
+            } elseif ($isRemoved || $isUpdated) {
+                $filtered->$property($original->$property());
+
+                foreach ($value['dependencies'] as $dependency) {
+                    $filtered->$dependency($original->$dependency());
+                }
+            } else {
+                continue;
+            }
+
+            // Inform the user.
+            $this->warnings++;
+
+            $this->grav['messages']->add(
+                'You are not authorized to change ' . $value['message'] . '.',
+                'warning'
+            );
         }
 
-        // List permissions of current logged in user for each page provided.
-        // =====================================================================
-        if ($this->grav['admin']->route === null) {
-            // If Listing pages (dashboard or list of all pages)…
-            $pages = $this->grav['page']->evaluate(['@root.children']);
+        return $filtered;
+    }
 
-            $pathsPerms = $this->getVisibleTree(
-                $this->getPathsPerms(
-                    $this->getBranchDown($pages)
-                )
-            );
-        } else {
-            // If editing a page…
-            $pages = $this->grav['page']->evaluate([
-                [
-                    ['page@.page' => $page->route()],
-                    ['page@.page' => $page->parent()->route()],
-                ]
-            ]);
+    /**
+     * Check that no locked property has been changed in the header of a Page.
+     * The locked headers will be reverted if necessary.
+     *
+     * @param  object $original Original header
+     * @param  object $new      Updated header
+     *
+     * @return object           Filtered header
+     */
+    public function checkLockedHeaderProps(object $original, object $new): object
+    {
+        $filtered = $new;
+        $lockedProps = [
+            'author'      => 'the author',
+            'permissions' => 'the permissions',
+            'sitemap'     => 'the Sitemap configuration',
+        ];
 
-            $pathsPerms = $this->getPathsPerms(
-                $this->getBranchUp($page)
+        foreach ($lockedProps as $property => $value) {
+            // If the property has been added, removed or changed…
+            $isAdded =
+                !property_exists($original, $property)
+                && property_exists($filtered, $property);
+
+            $isRemoved =
+                property_exists($original, $property)
+                && !property_exists($filtered, $property);
+
+            $isUpdated =
+                property_exists($original, $property)
+                && property_exists($filtered, $property)
+                && $original->$property !== $filtered->$property;
+
+            if ($isAdded) {
+                unset($filtered->$property);
+            } elseif ($isRemoved) {
+                $filtered->$property = $original->$property;
+            } elseif ($isUpdated) {
+                $filtered->$property = $original->$property;
+            } else {
+                continue;
+            }
+
+            // Inform the user.
+            $this->warnings++;
+
+            $this->grav['messages']->add(
+                'You are not authorized to change ' . $value . '.',
+                'warning'
             );
         }
 
-        $this->grav['twig']->twig_vars['perms'] = $pathsPerms;
+        return $filtered;
     }
 
     /**
@@ -292,23 +370,6 @@ class AdminPagesPermissionsPlugin extends Plugin
         }
 
         return $pathsPerms;
-    }
-
-    /**
-     * Sort two paths from the deepest descendants to the oldest ancestors.
-     * This function is used in to sort an array of paths in a sorting function.
-     *
-     * @param  string $path1 First path to compare
-     * @param  string $path2 Second path to compare
-     *
-     * @return integer
-     */
-    private function deepToRoot($path1, $path2): int
-    {
-        $depth1 = count(explode('/', $path1));
-        $depth2 = count(explode('/', $path2));
-
-        return ($depth1 > $depth2) ? -1 : 1;
     }
 
     /**
@@ -451,6 +512,89 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
+     * When Twig Templates Path for the Admin are processed…
+     *
+     * @param  Event $event
+     */
+    public function onAdminTwigTemplatePaths( Event $event )
+    {
+        // Load admin templates from the theme.
+        $paths   = $event['paths'];
+        $paths[] = __DIR__ . '/admin/themes/grav/templates';
+
+        $event['paths'] = $paths;
+    }
+
+    /**
+     * When a Page is initialized in the Admin…
+     *
+     * @param  Event $event
+     */
+    public function onAdminPageInitialized( Event $event )
+    {
+        $user       = $this->grav['user'];
+        $pathsPerms = null;
+
+        $this->grav['twig']->twig_vars['is_admin'] = $this->getAdminStatus($user);
+
+        // Stop if we’re not dealing with specific Admin locations.
+        // “Dashboard” and “pages” locations let user interact with pages.
+        // =====================================================================
+        if (!in_array(
+            $this->grav['admin']->location,
+            ['dashboard', 'pages']
+        )) {
+            return;
+        }
+
+        // A route will not have a page when creating a new page; get the
+        // closest existing page to the current route.
+        $route = '/' . $this->grav['admin']->route;
+
+        while (true) {
+            $page  = $this->grav['page']->find($route);
+            $route = substr($route, 0, strripos($route, '/') + 1);
+
+            if ($page !== null || $route === '') {
+                break;
+            }
+        }
+
+        // Stop if we’re not dealing with a page.
+        // =====================================================================
+        if (!$page instanceof Page) {
+            return;
+        }
+
+        // List permissions of current logged in user for each page provided.
+        // =====================================================================
+        if ($this->grav['admin']->route === null) {
+            // If Listing pages (dashboard or list of all pages)…
+            $pages = $this->grav['page']->evaluate(['@root.children']);
+
+            $pathsPerms = $this->getVisibleTree(
+                $this->getPathsPerms(
+                    $this->getBranchDown($pages)
+                )
+            );
+        } else {
+            // If editing a page…
+            $pages = $this->grav['page']->evaluate([
+                [
+                    ['page@.page' => $page->route()],
+                    ['page@.page' => $page->parent()->route()],
+                ]
+            ]);
+
+            $pathsPerms = $this->getPathsPerms(
+                $this->getBranchUp($page)
+            );
+        }
+
+        $this->grav['twig']->twig_vars['perms'] = $pathsPerms;
+    }
+
+    /**
      * [onAdminCreatePageFrontmatter]
      * Check that a user is allowed to create a page where it wants to.
      *
@@ -554,149 +698,5 @@ class AdminPagesPermissionsPlugin extends Plugin
         $event->stopPropagation();
 
         $this->grav->redirect($redirect);
-    }
-
-    /**
-     * Check that no locked property has been changed.
-     * The locked properties will be reverted if necessary.
-     *
-     * @param  Page $original Original Page
-     * @param  Page $new      Updated Page
-     *
-     * @return Page           Filtered Page
-     */
-    public function checkLockedProps(Page $original, Page $new): Page
-    {
-        $filtered    = $new;
-        $lockedProps = [
-            'parent'   => [
-                'message'      => 'the parent',
-                'dependencies' => [
-                    'path',
-                    'route',
-                ],
-            ],
-            'template' => [
-                'message'      => 'the template',
-                'dependencies' => [
-                    'name',
-                ],
-            ],
-        ];
-
-        foreach ($lockedProps as $property => $value) {
-            // If the property has been added, removed or changed…
-            $isAdded =
-                !method_exists($original, $property)
-                && method_exists($filtered, $property);
-
-            $isRemoved =
-                method_exists($original, $property)
-                && !method_exists($filtered, $property);
-
-            $isUpdated =
-                method_exists($original, $property)
-                && method_exists($filtered, $property)
-                && $original->$property() !== $filtered->$property();
-
-            if ($isAdded) {
-                unset($filtered->$property);
-            } elseif ($isRemoved || $isUpdated) {
-                $filtered->$property($original->$property());
-
-                foreach ($value['dependencies'] as $dependency) {
-                    $filtered->$dependency($original->$dependency());
-                }
-            } else {
-                continue;
-            }
-
-            // Inform the user.
-            $this->warnings++;
-
-            $this->grav['messages']->add(
-                'You are not authorized to change ' . $value['message'] . '.',
-                'warning'
-            );
-        }
-
-        return $filtered;
-    }
-
-    /**
-     * Check that no locked property has been changed in the header of a Page.
-     * The locked headers will be reverted if necessary.
-     *
-     * @param  object $original Original header
-     * @param  object $new      Updated header
-     *
-     * @return object           Filtered header
-     */
-    public function checkLockedHeaderProps(object $original, object $new): object
-    {
-        $filtered = $new;
-        $lockedProps = [
-            'author'      => 'the author',
-            'permissions' => 'the permissions',
-            'sitemap'     => 'the Sitemap configuration',
-        ];
-
-        foreach ($lockedProps as $property => $value) {
-            // If the property has been added, removed or changed…
-            $isAdded =
-                !property_exists($original, $property)
-                && property_exists($filtered, $property);
-
-            $isRemoved =
-                property_exists($original, $property)
-                && !property_exists($filtered, $property);
-
-            $isUpdated =
-                property_exists($original, $property)
-                && property_exists($filtered, $property)
-                && $original->$property !== $filtered->$property;
-
-            if ($isAdded) {
-                unset($filtered->$property);
-            } elseif ($isRemoved) {
-                $filtered->$property = $original->$property;
-            } elseif ($isUpdated) {
-                $filtered->$property = $original->$property;
-            } else {
-                continue;
-            }
-
-            // Inform the user.
-            $this->warnings++;
-
-            $this->grav['messages']->add(
-                'You are not authorized to change ' . $value . '.',
-                'warning'
-            );
-        }
-
-        return $filtered;
-    }
-
-    /**
-     * Determine if the user belongs to a group that can manage all pages.
-     *
-     * @return bool
-     */
-    public function getAdminStatus(User $user): bool
-    {
-        if ($user['groups']) {
-            foreach ($user['groups'] as $group)  {
-                // @todo Find groups which have all permissions for all pages,
-                // based on permissions instead of hardcoded.
-                $isAdmin = in_array($group, ['editors', 'supervisors']);
-
-                if ($isAdmin) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }
