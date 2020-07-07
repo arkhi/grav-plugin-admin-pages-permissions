@@ -317,12 +317,14 @@ class AdminPagesPermissionsPlugin extends Plugin
 
     /**
      * Define which nodes of the tree should be visible to the current user.
+     * If a page is visible in a branch, then all nodes closer to the root will
+     * be visible, but not necessarily updatable.
      *
-     * @param  (array)[] $pathsPerms Iterable of Pages
+     * @param  (array)[] $pathsPerms Array of path:permissions items
      *
-     * @return (array)[]             Flattened list of paths with permissions
+     * @return (array)[]             Array of path:permissions items
      */
-    public function getVisibleTree($pathsPerms): array
+    public function getVisibleTreeForUser($pathsPerms): array
     {
         // Sort paths from furthest descendants to root.
         uksort($pathsPerms, [$this, 'deepToRoot']);
@@ -337,8 +339,8 @@ class AdminPagesPermissionsPlugin extends Plugin
             ) {
                 $parent = substr($path, 0, strrpos($path, '/'));
 
-                // While we’re still parsing paths withing the pages…
-                while ( strstr($parent, 'pages/') !== false ) {
+                // While we’re still parsing paths within the pages…
+                while (strstr($parent, 'pages/') !== false) {
                     $pathsPerms[$parent]['read'] = true;
 
                     $parent = substr($parent, 0, strrpos($parent, '/'));
@@ -350,7 +352,7 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
-     * List permissions for all paths specific to this user.
+     * List permissions specific to this user, for all paths provided.
      *
      * @param  array     $pages      Array of path:Page items
      * @param  array     $pathsPerms Array of path:permissions items
@@ -358,7 +360,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      * @return (array)[]             Array of path:permissions items
      *
      */
-    public function getPathsPerms($pages, $pathsPerms = []): array
+    public function getPathsPermsForUser($pages, $pathsPerms = []): array
     {
         $user = $this->grav['user'];
 
@@ -419,7 +421,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      *
      * @return (array)array|null       Closest ancestor Page if it exists.
      */
-    private function getPerms(Page $page): ?array
+    private function getPermsForPage(Page $page): ?array
     {
         if (!$page) {
             return null;
@@ -429,15 +431,18 @@ class AdminPagesPermissionsPlugin extends Plugin
         $permsTree = [];
         $grav      = Grav::instance();
 
-        // Get the default configuration from the plugin and the user configuration for the plugin.
+        // 1. Get permissions from the default configuration of the plugin.
         $name         = 'admin-pages-permissions';
         $pathPlugin   = $grav['locator']->findResource("plugins://{$name}/{$name}.yaml");
         $file         = new File($pathPlugin);
         $configPlugin = Yaml::parse($file->load())['permissions'];
+
+        // 2. Get permissions from the user configuration for the plugin.
         $configUser   = $grav['config']['plugins.admin-pages-permissions']['permissions'];
 
         $permissions = array_merge_recursive($configPlugin, $configUser);
 
+        // 3. Get permissions from the tree of Pages.
         // Gather permissions for each ancestor, from closest to furthest.
         while (true) {
             if ($this->getPermsFromPage($node) !== null) {
@@ -475,7 +480,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function getPermsForUser(Page $page, User $user): ?array
     {
-        $perms     = $this->getPerms($page);
+        $perms     = $this->getPermsForPage($page);
         $permsUser = [];
 
         if (is_array($user->groups)) {
@@ -572,8 +577,8 @@ class AdminPagesPermissionsPlugin extends Plugin
             // If Listing pages (dashboard or list of all pages)…
             $pages = $this->grav['page']->evaluate(['@root.children']);
 
-            $pathsPerms = $this->getVisibleTree(
-                $this->getPathsPerms(
+            $pathsPerms = $this->getVisibleTreeForUser(
+                $this->getPathsPermsForUser(
                     $this->getBranchDown($pages)
                 )
             );
@@ -586,7 +591,7 @@ class AdminPagesPermissionsPlugin extends Plugin
                 ]
             ]);
 
-            $pathsPerms = $this->getPathsPerms(
+            $pathsPerms = $this->getPathsPermsForUser(
                 $this->getBranchUp($page)
             );
         }
