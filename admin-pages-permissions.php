@@ -123,7 +123,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function onAdminPageInitialized( Event $event )
     {
-        $user      = $this->grav['user'];
+        $user       = $this->grav['user'];
         $pathsPerms = null;
 
         $this->grav['twig']->twig_vars['is_admin'] = $this->getAdminStatus($user);
@@ -143,7 +143,7 @@ class AdminPagesPermissionsPlugin extends Plugin
         $route = '/' . $this->grav['admin']->route;
 
         while (true) {
-            $page = $this->grav['page']->find($route);
+            $page  = $this->grav['page']->find($route);
             $route = substr($route, 0, strripos($route, '/') + 1);
 
             if ($page !== null || $route === '') {
@@ -242,7 +242,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      *
      * @param  (array)[] $pathsPerms Iterable of Pages
      *
-     * @return (array)[]            Flattened list of paths with permissions
+     * @return (array)[]             Flattened list of paths with permissions
      */
     public function getVisibleTree($pathsPerms): array
     {
@@ -364,9 +364,9 @@ class AdminPagesPermissionsPlugin extends Plugin
             return null;
         }
 
-        $node     = $page;
+        $node      = $page;
         $permsTree = [];
-        $grav     = Grav::instance();
+        $grav      = Grav::instance();
 
         // Get the default configuration from the plugin and the user configuration for the plugin.
         $name         = 'admin-pages-permissions';
@@ -513,7 +513,7 @@ class AdminPagesPermissionsPlugin extends Plugin
         }
 
         $redirect       = $this->grav['request']->getServerParams()['REDIRECT_URL'];
-        $perms           = $this->getPermsForUser($page->getOriginal(), $user);
+        $perms          = $this->getPermsForUser($page->getOriginal(), $user);
         $this->warnings = 0;
 
         // Prevent users to update some properties.
@@ -570,14 +570,14 @@ class AdminPagesPermissionsPlugin extends Plugin
         $filtered    = $new;
         $lockedProps = [
             'parent'   => [
-                'message' => 'the parent',
+                'message'      => 'the parent',
                 'dependencies' => [
                     'path',
                     'route',
                 ],
             ],
             'template' => [
-                'message' => 'the template',
+                'message'      => 'the template',
                 'dependencies' => [
                     'name',
                 ],
