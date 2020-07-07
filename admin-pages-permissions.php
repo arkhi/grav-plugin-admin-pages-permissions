@@ -481,7 +481,13 @@ class AdminPagesPermissionsPlugin extends Plugin
     public function getPermsForUser(Page $page, User $user): ?array
     {
         $perms     = $this->getPermsForPage($page);
-        $permsUser = [];
+        $permsUser = [
+            'create' => false,
+            'read'   => false,
+            'update' => false,
+            'delete' => false,
+            'move'   => false,
+        ];
 
         if (is_array($user->groups)) {
             // Merge any permissions from groups the user is a member of.
