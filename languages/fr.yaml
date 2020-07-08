@@ -1,0 +1,9 @@
+PLUGIN_ADMIN_PAGES_PERMISSIONS:
+  WARNING_PROPERTY_LOCKED: |
+    Vous n’avez pas l’autorisation de modifier la propriété <strong>%1$s</strong>.
+  WARNING_PROPERTY_REVERTED: |
+    Les modifications avec un message d’erreur n’ont pas été appliquées
+  WARNING_CREATE_IN_PARENT: |
+    Vous n’avez pas l’autorisation de créer une page dans cette page parente.
+  WARNING_UPDATE: |
+    Vous n’avez pas l’autorisation de modifier cette page.

@@ -21,7 +21,7 @@ You can installl this plugin by following any of the options available with the 
 
 Before configuring this plugin, you should copy the `user/plugins/admin-pages-permissions/admin-pages-permissions.yaml` to `user/config/plugins/admin-pages-permissions.yaml` and only edit that copy.
 
-Here is the default configuration and an explanation of available options:
+Here is the default configuration:
 
 ```yaml
 enabled: true
@@ -33,6 +33,33 @@ permissions:
       update: true
       delete: true
       move: true
+locked_props: null
+locked_header:
+  - author
+  - permissions
+```
+
+### Permissions
+
+```yaml
+permissions:
+  groups:
+    editors:
+      create: true
+      read:   true
+      update: true
+      delete: true
+      move:   false
+    others:
+      delete: false
+      move:   true
+  users:
+    john:
+      create: false
+      delete: false
+      move:   false
+    jane:
+      delete: true
 ```
 
 - `permissions` defines what a specific user can do with when editing a page, depending on the group they belong to and the settings applied on each page.
@@ -44,43 +71,108 @@ permissions:
 - `delete` allows to delete a page and all its descendants.
 - `move` allows to move a page to another node.
 
-A full example would be as follow:
+---
+
+- When a user is a member of multiple groups, `true` prevails.
+- The permissions for groups are overridden by permissions for users.
+
+Let’s consider a page at the root with this example; for the current page these should be the resulting permissions:
+
+- Any member of the group `editors`:       create, read, update, delete;
+- Any member of the group `others`:        move;
+- A member of both `editors` and `others`: all permissions;
+- The user `john`:                         no permission;
+- The user `john`, member of `editors`:    read, update;
+- The user `jane`:                         delete;
+- The user `jane`, member of `editors`:    create, read, update, delete;
+- The user `jane`, member of `others`:     delete, move;
+
+A child page would inherit those permissions and apply its own if they exist.
+
+### Locked Properties
 
 ```yaml
-permissions:
-  groups:
-    editors:
-      create: true
-      read:   true
-      update: true
-      delete: false
-      move:   false
-    others:
-      delete: false
-      move:   false
-  users:
-    john:
-      create: false
-      delete: false
-      move:   false
-    jane:
-      delete: true
+locked_props:
+  parent:
+    dependencies:
+      - path
+      - route
+  template:
+    dependencies:
+      - name
 ```
 
-This can appear in `user/config/plugins/admin-pages-permissions.yaml` to setup defaults, or on any page to have a more fine‑grained approach.
+- `locked_props` are properties that will be reverted if the user tries to update them, along with their dependencies, unless the user is a _super user_ (supervisor).
+- `parent` is the name of the property being updated when one decides to change the parent from the Admin.
+- `dependencies` are page properties computed by Grav based on the updated property; they need to be ignored as well. In that example, `path` and `routes` will be reverted as well if `parent` is locked.
 
-Note that if you use the Admin Plugin, a file with your configuration named admin-pages-permissions.yaml will be saved in the `user/config/plugins/`-folder once the configuration is saved in the Admin.
+In this example, trying to update the parent or the template should show a warning for each locked property that was intended to be updated, along with an informative message saying the changes were not applied. **All other changes are applied**.
+
+### Locked Header
+
+```yaml
+locked_header:
+  - author
+  - permissions
+  - sitemap
+```
+
+`locked_header` are properties from the page frontmatter that will be reverted if the user tries to update them, unless the user is a _super user_ (supervisor).
 
 ## Usage
 
+### Permissions
 
+The permissions are merged from global to local context:
+
+1. `user/plugins/admin-pages-permissions/admin-pages-permissions.yaml` for the defaults.
+1. `user/config/plugins/admin-pages-permissions.yaml`
+1. `user/ENVIRONMENT/config/plugins/admin-pages-permissions.yaml` where `ENVIRONMENT` depends on your [_Environment Configuration_](https://learn.getgrav.org/advanced/environment-config).
+1. The frontmatter of the furthest ancestor of the current page.
+1. The frontmatter of the closest ancestor of the current page.
+1. The frontmatter of the current page.
+
+**A previously set permission can not be unset, but can be changed to `true` or `false`.**
+
+Note that the author of a page will receive all <abbr title="Create, Read, Update and Delete">CRUD</abbr> permissions.
+
+### Locked properties
+
+Values for _locked properties configuration_ are replaced by user defined values in the user config or environment files:
+
+If `user/config/plugins/admin-pages-permissions.yaml` contains:
+
+```yaml
+locked_props:
+  parent:
+    dependencies:
+      - path
+      - route
+  template:
+    dependencies:
+      - name
+locked_header:
+  - author
+  - permissions
+  - sitemap
+
+```
+
+and `user/ENVIRONMENT/config/plugins/admin-pages-permissions.yaml`:
+
+```yaml
+locked_props:
+locked_header:
+```
+
+Then all page properties and header’s properties can be changed when a page is saved.
 
 ## Credits
 
-Kuddos to Grav users for the support on Discord. :)
+Kuddos to Grav users for the support on [Discord](https://discord.gg/EeNpnz). :)
 
-## To Do
+## To do
 
-- [ ] Clean up.
-- [ ] Add Tests.
-
+- [ ] Simplify storage of permissions.
+- [ ] Add Functional tests.
+- [ ] Add Unit tests.

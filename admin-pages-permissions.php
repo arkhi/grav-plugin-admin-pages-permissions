@@ -153,21 +153,8 @@ class AdminPagesPermissionsPlugin extends Plugin
     public function checkLockedProps(Page $original, Page $new): Page
     {
         $filtered    = $new;
-        $lockedProps = [
-            'parent'   => [
-                'message'      => 'the parent',
-                'dependencies' => [
-                    'path',
-                    'route',
-                ],
-            ],
-            'template' => [
-                'message'      => 'the template',
-                'dependencies' => [
-                    'name',
-                ],
-            ],
-        ];
+
+        $lockedProps = $this->grav['config']["plugins.admin-pages-permissions"]['locked_props'];
 
         foreach ($lockedProps as $property => $value) {
             // If the property has been added, removed or changed…
@@ -200,7 +187,10 @@ class AdminPagesPermissionsPlugin extends Plugin
             $this->warnings++;
 
             $this->grav['messages']->add(
-                'You are not authorized to change ' . $value['message'] . '.',
+                $this->grav['language']->translate([
+                    'PLUGIN_ADMIN_PAGES_PERMISSIONS.WARNING_PROPERTY_LOCKED',
+                    $property
+                ]),
                 'warning'
             );
         }
@@ -220,14 +210,11 @@ class AdminPagesPermissionsPlugin extends Plugin
     public function checkLockedHeaderProps(object $original, object $new): object
     {
         $filtered = $new;
-        $lockedProps = [
-            'author'      => 'the author',
-            'permissions' => 'the permissions',
-            'sitemap'     => 'the Sitemap configuration',
-        ];
 
-        foreach ($lockedProps as $property => $value) {
-            // If the property has been added, removed or changed…
+        $lockedProps = $this->grav['config']["plugins.admin-pages-permissions"]['locked_header'];
+
+        foreach ($lockedProps as $property) {
+            // If the property has been added, removed or updated…
             $isAdded =
                 !property_exists($original, $property)
                 && property_exists($filtered, $property);
@@ -255,7 +242,10 @@ class AdminPagesPermissionsPlugin extends Plugin
             $this->warnings++;
 
             $this->grav['messages']->add(
-                'You are not authorized to change ' . $value . '.',
+                $this->grav['language']->translate([
+                    'PLUGIN_ADMIN_PAGES_PERMISSIONS.WARNING_PROPERTY_LOCKED',
+                    $property
+                ]),
                 'warning'
             );
         }
@@ -644,7 +634,9 @@ class AdminPagesPermissionsPlugin extends Plugin
         }
 
         $this->grav['messages']->add(
-            'You are not authorized to create a page in this parent page.',
+                $this->grav['language']->translate(
+                    'PLUGIN_ADMIN_PAGES_PERMISSIONS.WARNING_CREATE_IN_PARENT'
+                ),
             'error'
         );
 
@@ -702,7 +694,9 @@ class AdminPagesPermissionsPlugin extends Plugin
 
         if ($this->warnings > 0) {
             $this->grav['messages']->add(
-                'Changes with warnings have not been applied.',
+                $this->grav['language']->translate(
+                    'PLUGIN_ADMIN_PAGES_PERMISSIONS.WARNING_PROPERTY_REVERTED'
+                ),
                 'notice'
             );
         }
@@ -713,7 +707,9 @@ class AdminPagesPermissionsPlugin extends Plugin
         }
 
         $this->grav['messages']->add(
-            'You are not authorized to update this page.',
+            $this->grav['language']->translate(
+                'PLUGIN_ADMIN_PAGES_PERMISSIONS.WARNING_UPDATE'
+            ),
             'error'
         );
 
