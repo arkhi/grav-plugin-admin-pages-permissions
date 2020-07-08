@@ -7,6 +7,7 @@ It allows to limit what a user can see or do when accessing pages, including:
 - Adding specific permissions to groups or users.
 - Filter the list of pages shown to the logged in user based on those permissions.
 - Lock a custom list of page’s properties.
+- Show or hide elements on the interface based on those permissions.
 
 Permissions can be assigned for specific groups or users, globally or per page.
 
