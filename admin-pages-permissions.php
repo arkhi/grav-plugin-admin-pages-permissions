@@ -430,17 +430,28 @@ class AdminPagesPermissionsPlugin extends Plugin
         $node      = $page;
         $permsTree = [];
         $grav      = Grav::instance();
+        $name      = 'admin-pages-permissions';
 
         // 1. Get permissions from the default configuration of the plugin.
-        $name         = 'admin-pages-permissions';
         $pathPlugin   = $grav['locator']->findResource("plugins://{$name}/{$name}.yaml");
-        $file         = new File($pathPlugin);
-        $configPlugin = Yaml::parse($file->load())['permissions'];
+        $filePLugin   = new File($pathPlugin);
+        $configPlugin = Yaml::parse($filePLugin->load())['permissions'];
 
         // 2. Get permissions from the user configuration for the plugin.
-        $configUser   = $grav['config']['plugins.admin-pages-permissions']['permissions'];
+        $pathUser   = $grav['locator']->findResource("user://config/plugins/{$name}.yaml");
+        $fileUser   = new File($pathUser);
+        $configUser = Yaml::parse($fileUser->load())['permissions'];
 
-        $permissions = array_merge_recursive($configPlugin, $configUser);
+        // 3. Get permissions from the user configuration for the plugin and the
+        //    current environment.
+        //    This can be equal to the User configuration  if no configuration
+        //    file exists for the current environment.
+        $configEnv = $grav['config']["plugins.{$name}"]['permissions'];
+
+        // Merge all configs, replacing existing values with more prevalent ones,
+        // but keeping previously defined keys that would not exist in a newer
+        // config.
+        $permissions = array_replace_recursive($configPlugin, $configUser, $configEnv);
 
         // 3. Get permissions from the tree of Pages.
         // Gather permissions for each ancestor, from closest to furthest.
