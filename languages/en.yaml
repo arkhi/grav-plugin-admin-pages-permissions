@@ -1,0 +1,9 @@
+PLUGIN_ADMIN_PAGES_PERMISSIONS:
+  WARNING_PROPERTY_LOCKED: |
+    You are not authorized to update the <strong>%1$s</strong> property.
+  WARNING_PROPERTY_REVERTED: |
+    Changes with warnings have not been applied.
+  WARNING_CREATE_IN_PARENT: |
+    You are not authorized to create a page in this parent page.
+  WARNING_UPDATE: |
+    You are not authorized to update this page.

@@ -8,3 +8,7 @@ permissions:
       update: true
       delete: true
       move: true
+locked_props: null
+locked_header:
+  - author
+  - permissions
