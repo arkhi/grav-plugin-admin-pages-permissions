@@ -103,28 +103,6 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
-     * Determine if the user belongs to a group that can manage all pages.
-     *
-     * @return bool
-     */
-    public function getAdminStatus(User $user): bool
-    {
-        if ($user['groups']) {
-            foreach ($user['groups'] as $group)  {
-                // @todo Find groups which have all permissions for all pages,
-                // based on permissions instead of hardcoded.
-                $isAdmin = in_array($group, ['editors', 'supervisors']);
-
-                if ($isAdmin) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Sort two paths from the deepest descendants to the oldest ancestors.
      * This function is used in to sort an array of paths in a sorting function.
      *
@@ -547,7 +525,9 @@ class AdminPagesPermissionsPlugin extends Plugin
         $user       = $this->grav['user'];
         $pathsPerms = null;
 
-        $this->grav['twig']->twig_vars['is_admin'] = $this->getAdminStatus($user);
+        $this->grav['twig']->twig_vars['pages_super'] =
+            $user->authorize('admin.pages_super')
+            || $user->authorize('admin.super');
 
         // Stop if we’re not dealing with specific Admin locations.
         // “Dashboard” and “pages” locations let user interact with pages.
@@ -663,10 +643,12 @@ class AdminPagesPermissionsPlugin extends Plugin
             return;
         }
 
-        $user = $this->grav['user'];
+        $user         = $this->grav['user'];
+        $pageOriginal = $page->getOriginal();
+        $pageNew      = $page;
 
         // Don’t do anything if the user has the rights to update.
-        if ($this->getAdminStatus($user)) {
+        if ($this->getPermsForUser($pageOriginal, $user)['update'] === true) {
             return;
         }
 
@@ -675,9 +657,6 @@ class AdminPagesPermissionsPlugin extends Plugin
         $this->warnings = 0;
 
         // Prevent users to update some properties.
-        $pageOriginal = $page->getOriginal();
-        $pageNew      = $page;
-
         $page = $this->checkLockedProps(
             $pageOriginal,
             $pageNew
