@@ -103,6 +103,18 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
+     * Check if the user can manage all pages without restriction.
+     *
+     * @param  User    $user Current logged in user
+     *
+     * @return boolean
+     */
+    public function isPagesSuper(User $user): bool
+    {
+        return $user->authorize('admin.pages_super') || $user->authorize('admin.super');
+    }
+
+    /**
      * Sort two paths from the deepest descendants to the oldest ancestors.
      * This function is used in to sort an array of paths in a sorting function.
      *
@@ -468,7 +480,15 @@ class AdminPagesPermissionsPlugin extends Plugin
             'move'   => false,
         ];
 
-        if (is_array($user->groups)) {
+        if ($this->isPagesSuper($user)) {
+            $permsUser = [
+                'create' => true,
+                'read'   => true,
+                'update' => true,
+                'delete' => true,
+                'move'   => true,
+            ];
+        } elseif (is_array($user->groups)) {
             // Merge any permissions from groups the user is a member of.
             foreach ($user->groups as $group) {
                 // If the group exists in permissions groups.
@@ -525,9 +545,7 @@ class AdminPagesPermissionsPlugin extends Plugin
         $user       = $this->grav['user'];
         $pathsPerms = null;
 
-        $this->grav['twig']->twig_vars['pages_super'] =
-            $user->authorize('admin.pages_super')
-            || $user->authorize('admin.super');
+        $this->grav['twig']->twig_vars['pages_super'] = $this->isPagesSuper($user);
 
         // Stop if we’re not dealing with specific Admin locations.
         // “Dashboard” and “pages” locations let user interact with pages.
