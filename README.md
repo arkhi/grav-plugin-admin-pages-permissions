@@ -26,40 +26,48 @@ Here is the default configuration:
 
 ```yaml
 enabled: true
-permissions:
-  groups:
-    supervisors:
-      create: true
-      read: true
-      update: true
-      delete: true
-      move: true
+
 locked_props: null
+
 locked_header:
   - author
   - permissions
+
 ```
 
 ### Permissions
 
+A `pages_super` access permissions can be setup for super users. This can go in the user configuration, groups or accounts.
+
+An `access.admin.pages_permissions` array can define default permissions for all pages (the latest prevails):
+
+- plugin
+- user
+- environment
+- groups
+- user
+
+
 ```yaml
-permissions:
-  groups:
-    editors:
-      create: true
-      read:   true
-      update: true
-      delete: true
-      move:   false
-    others:
-      delete: false
-      move:   true
-  users:
-    john:
-      create: false
-      delete: false
-      move:   false
-    jane:
+access:
+  admin:
+    pages_permissions:
+      groups:
+        editors:
+          create: true
+          read:   true
+          update: true
+          delete: true
+          move:   false
+        others:
+          delete: false
+          move:   true
+      users:
+        john:
+          create: false
+          delete: false
+          move:   false
+        jane:
       delete: true
 ```
 
@@ -129,6 +137,8 @@ The permissions are merged from global to local context:
 1. `user/plugins/admin-pages-permissions/admin-pages-permissions.yaml` for the defaults.
 1. `user/config/plugins/admin-pages-permissions.yaml`
 1. `user/ENVIRONMENT/config/plugins/admin-pages-permissions.yaml` where `ENVIRONMENT` depends on your [_Environment Configuration_](https://learn.getgrav.org/advanced/environment-config).
+1. `access.admin.pages_permissions` in groups a user belongs to.
+1. `access.admin.pages_permissions` in the account.
 1. The frontmatter of the furthest ancestor of the current page.
 1. The frontmatter of the closest ancestor of the current page.
 1. The frontmatter of the current page.

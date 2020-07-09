@@ -1,14 +1,7 @@
 enabled: true
-active: false
-permissions:
-  groups:
-    supervisors:
-      create: true
-      read: true
-      update: true
-      delete: true
-      move: true
+
 locked_props: null
+
 locked_header:
   - author
   - permissions

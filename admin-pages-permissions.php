@@ -296,6 +296,82 @@ class AdminPagesPermissionsPlugin extends Plugin
     }
 
     /**
+     * Get the permissions from plugin, user and environment.
+     *
+     * @return (boolean)[] Permissions specified in the file
+     */
+    public function getDefaultPermissions(): array
+    {
+        $grav = Grav::instance();
+        $name = 'admin-pages-permissions';
+
+        // 1. Get permissions from the default configuration of the plugin.
+        $pathPlugin   = $grav['locator']->findResource("plugins://{$name}/{$name}.yaml");
+        $filePlugin   = new File($pathPlugin);
+        $configPlugin = Yaml::parse($filePlugin->load());
+
+        $permsPlugin =
+            $configPlugin['access']['admin']['pages_permissions']
+            ?? [];
+
+        // 2. Get permissions from the user configuration for the plugin.
+        $permsUser = [];
+        $pathUser  = $grav['locator']->findResource("user://config/plugins/{$name}.yaml");
+
+        if ($pathUser !== false) {
+            $fileUser   = new File($pathUser);
+            $configUser = Yaml::parse($fileUser->load());
+
+            if (isset($configUser['access']['admin']['pages_permissions'])) {
+                $permsUser = $configUser['access']['admin']['pages_permissions'];
+            }
+        }
+
+        // 3. Get permissions from the user configuration for the plugin and the
+        //    current environment.
+        //    This can be equal to the User configuration  if no configuration
+        //    file exists for the current environment.
+        $permsEnv =
+            $grav['config']["plugins.{$name}.access.admin.pages_permissions"]
+            ?? [];
+
+        // 4. Get default permissions from groups the user belongs to.
+        $permsGroups = [];
+
+        foreach ($grav['user']->get('groups') as $group) {
+            $permsGroup =
+                $grav['config']->get("groups.{$group}.access.admin.pages_permissions")
+                ?? [];
+
+            // Groups with higher permissions always prevail.
+            foreach ($permsGroup as $perm => $value) {
+                $permsGroups[$perm] =
+                    isset($permsGroups[$perm]) && $permsGroups[$perm] === true
+                    ? $permsGroups[$perm]
+                    : $value;
+            }
+        }
+
+        // 5. Get default permissions from the user.
+        $permsUser =
+            $grav['user']->get('access.admin.pages_permissions')
+            ?? [];
+
+        // Merge all configs, replacing existing values with prevailing ones,
+        // but keeping previously defined keys that would not exist in a newer
+        // config.
+        $permissions = array_replace_recursive(
+            $permsPlugin,
+            $permsUser,
+            $permsEnv,
+            $permsGroups,
+            $permsUser
+        );
+
+        return $permissions;
+    }
+
+    /**
      * Define which nodes of the tree should be visible to the current user.
      * If a page is visible in a branch, then all nodes closer to the root will
      * be visible, but not necessarily updatable.
@@ -387,7 +463,7 @@ class AdminPagesPermissionsPlugin extends Plugin
             ];
         }
 
-        if ($header && property_exists($header, 'permissions')) {
+        if ($header && property_exists($header, 'access.admin.pages_permissions')) {
             return $header->permissions;
         }
 
@@ -409,29 +485,8 @@ class AdminPagesPermissionsPlugin extends Plugin
 
         $node      = $page;
         $permsTree = [];
-        $grav      = Grav::instance();
-        $name      = 'admin-pages-permissions';
 
-        // 1. Get permissions from the default configuration of the plugin.
-        $pathPlugin   = $grav['locator']->findResource("plugins://{$name}/{$name}.yaml");
-        $filePLugin   = new File($pathPlugin);
-        $configPlugin = Yaml::parse($filePLugin->load())['permissions'];
-
-        // 2. Get permissions from the user configuration for the plugin.
-        $pathUser   = $grav['locator']->findResource("user://config/plugins/{$name}.yaml");
-        $fileUser   = new File($pathUser);
-        $configUser = Yaml::parse($fileUser->load())['permissions'];
-
-        // 3. Get permissions from the user configuration for the plugin and the
-        //    current environment.
-        //    This can be equal to the User configuration  if no configuration
-        //    file exists for the current environment.
-        $configEnv = $grav['config']["plugins.{$name}"]['permissions'];
-
-        // Merge all configs, replacing existing values with more prevalent ones,
-        // but keeping previously defined keys that would not exist in a newer
-        // config.
-        $permissions = array_replace_recursive($configPlugin, $configUser, $configEnv);
+        $permissions = $this->getDefaultPermissions();
 
         // 3. Get permissions from the tree of Pages.
         // Gather permissions for each ancestor, from closest to furthest.
@@ -492,7 +547,11 @@ class AdminPagesPermissionsPlugin extends Plugin
             // Merge any permissions from groups the user is a member of.
             foreach ($user->groups as $group) {
                 // If the group exists in permissions groups.
-                if(is_array($perms['groups']) && array_key_exists($group, $perms['groups'])) {
+                if(
+                    isset($perms['groups'])
+                    && is_array($perms['groups'])
+                    && array_key_exists($group, $perms['groups'])
+                ) {
                     foreach ($perms['groups'][$group] as $task => $authorized) {
                         // A user should not be part of a group if that group
                         // provides him rights it should not have.
@@ -670,8 +729,9 @@ class AdminPagesPermissionsPlugin extends Plugin
             return;
         }
 
-        $redirect       = $this->grav['request']->getServerParams()['REDIRECT_URL'];
-        $perms          = $this->getPermsForUser($page->getOriginal(), $user);
+        $redirect = $this->grav['request']->getServerParams()['REDIRECT_URL'];
+        $perms    = $this->getPermsForUser($page->getOriginal(), $user);
+
         $this->warnings = 0;
 
         // Prevent users to update some properties.
