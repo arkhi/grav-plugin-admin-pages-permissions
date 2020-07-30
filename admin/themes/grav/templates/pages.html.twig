@@ -257,8 +257,6 @@
                     <a class="button disable-after-click" href="{{ uri.addNonce(page_url ~ '/task' ~ config.system.param_sep ~ 'copy', 'admin-form', 'admin-nonce') }}" class="page-copy" ><i class="fa fa-copy"></i> {{ "PLUGIN_ADMIN.COPY"|tu }}</a>
                 {% endif %}
 
-                {{ dump(perms[context.path]) }}
-
                 {% if perms[context.path]['move'] is sameas(true) %}
                     <a class="button" href="#" data-remodal-target="move"><i class="fa fa-arrows"></i> {{ "PLUGIN_ADMIN.MOVE"|tu }}</a>
                 {% endif %}

@@ -142,7 +142,7 @@ class AdminPagesPermissionsPlugin extends Plugin
      */
     public function checkLockedProps(Page $original, Page $new): Page
     {
-        $filtered    = $new;
+        $filtered = $new;
 
         $lockedProps = $this->grav['config']["plugins.admin-pages-permissions"]['locked_props'];
 
@@ -463,8 +463,15 @@ class AdminPagesPermissionsPlugin extends Plugin
             ];
         }
 
-        if ($header && property_exists($header, 'access.admin.pages_permissions')) {
-            return $header->permissions;
+        // @todo Dirty way of iteratively checking for a key. Check if PHP or
+        //       Grav have a better way to handle this.
+        if (
+            $header
+            && property_exists($header, 'access')
+            && isset($header->access['admin'])
+            && isset($header->access['admin']['pages_permissions'])
+        ) {
+            return $header->access['admin']['pages_permissions'];
         }
 
         return null;
@@ -724,8 +731,8 @@ class AdminPagesPermissionsPlugin extends Plugin
         $pageOriginal = $page->getOriginal();
         $pageNew      = $page;
 
-        // Don’t do anything if the user has the rights to update.
-        if ($this->getPermsForUser($pageOriginal, $user)['update'] === true) {
+        // Don’t check further if the user can manage all pages.
+        if ($this->isPagesSuper($user) === true) {
             return;
         }
 
