@@ -13,9 +13,10 @@ bugs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/issues
 docs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/blob/develop/README.md
 license: MIT
 
+# This plugin has only been tested on these versions.
 dependencies:
-  - {name: grav, version: '>=1.6.0'}
-  - {name: admin, version: '>=1.9.15'}
+  - {name: grav, version: '1.6.26'}
+  - {name: admin, version: '1.9.15'}
 
 form:
   validation: loose
