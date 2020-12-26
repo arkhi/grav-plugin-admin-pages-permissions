@@ -646,7 +646,7 @@ class AdminPagesPermissionsPlugin extends Plugin
         // =====================================================================
         if ($this->grav['admin']->route === null) {
             // If Listing pages (dashboard or list of all pages)…
-            $pages = $this->grav['page']->evaluate(['@root.children']);
+            $pages = $this->grav['page']->evaluate(['@root.children'], false);
 
             $pathsPerms = $this->getVisibleTreeForUser(
                 $this->getPathsPermsForUser(
@@ -660,7 +660,7 @@ class AdminPagesPermissionsPlugin extends Plugin
                     ['page@.page' => $page->route()],
                     ['page@.page' => $page->parent()->route()],
                 ]
-            ]);
+            ], false);
 
             $pathsPerms = $this->getPathsPermsForUser(
                 $this->getBranchUp($page)

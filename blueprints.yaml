@@ -1,7 +1,7 @@
 name: Admin Pages Permissions
 slug: admin-pages-permissions
 type: plugin
-version: 0.1.0
+version: 0.1.1
 description: Manage interaction permissions for users with access rights to Pages in the Admin.
 icon: plug
 author:
@@ -13,10 +13,11 @@ bugs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/issues
 docs: https://github.com/arkhi/grav-plugin-admin-pages-permissions/blob/develop/README.md
 license: MIT
 
-# This plugin has only been tested on these versions.
+# This plugin has been tested on these versions.
+# @see https://getcomposer.org/doc/articles/versions.md#version-range
 dependencies:
-  - {name: grav, version: '1.6.26'}
-  - {name: admin, version: '1.9.15'}
+  - {name: grav, version: '1.6.26 - 1.6.31'}
+  - {name: admin, version: '1.9.15 - 1.9.19'}
 
 form:
   validation: loose
