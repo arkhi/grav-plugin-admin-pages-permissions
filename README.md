@@ -1,6 +1,6 @@
 # Admin Pages Permissions Plugin
 
-The **Admin Pages Permissions** Plugin is an extension for [Grav](http://github.com/getgrav/grav) 1.6.26. Manage Interaction Permissions for Users with access rights to Pages in the Admin.
+The **Admin Pages Permissions** Plugin is an extension for [Grav](http://github.com/getgrav/grav) 1.6. Manage Interaction Permissions for Users with access rights to Pages in the Admin.
 
 It allows to limit what a user can see or do when accessing pages, including:
 
