@@ -71,7 +71,7 @@ access:
       delete: true
 ```
 
-- `permissions` defines what a specific user can do with when editing a page, depending on the group they belong to and the settings applied on each page.
+- `pages_permissions` defines what a specific user can do with when editing a page, depending on the group they belong to and the settings applied on each page.
 - `groups` is a list of groups.
 - `users` is a list of accounts’ usernames.
 - `create` allows to create new pages in nodes the user has access to, and below.
